@@ -1,0 +1,50 @@
+name: 'Prisma & NestJS Hygiene Checks'
+description: 'Validates NestJS DTO usage, Prisma migrations, and RLS policy drift'
+inputs:
+  working-directory:
+    description: 'Directory of the API project'
+    required: false
+    default: '.'
+  check-rls:
+    description: 'Whether to run RLS drift check (true/false)'
+    required: false
+    default: 'true'
+runs:
+  using: "composite"
+  steps:
+    - name: Check every @Body() is typed with a DTO class
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        BAD=$(grep -rn '@Body()' src --include='*.controller.ts' | grep -viE 'Dto' || true)
+        if [ -n "$BAD" ]; then
+          echo "::error::@Body() without a DTO class type — ValidationPipe will not validate these:"
+          echo "$BAD"
+          exit 1
+        fi
+
+    - name: Validate Prisma schema and migrations
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        npx prisma validate
+        for d in prisma/migrations/*/; do
+          [ -f "$d/migration.sql" ] || { echo "::error::missing migration.sql in $d"; exit 1; }
+        done
+
+    - name: Check for RLS drift against rls-policies.sql
+      if: ${{ inputs.check-rls == 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        if [ -f "prisma/rls/rls-policies.sql" ]; then
+          MIGRATIONS=$(cat prisma/migrations/*/migration.sql)
+          MISSING=0
+          for table in $(grep -oP 'CREATE POLICY \S+ ON "\K[^"]+' prisma/rls/rls-policies.sql | sort -u); do
+            if ! echo "$MIGRATIONS" | grep -qi "ENABLE ROW LEVEL SECURITY.*\"$table\"\|\"$table\".*ENABLE ROW LEVEL SECURITY"; then
+              echo "::error::prisma/rls/rls-policies.sql defines a policy for \"$table\" but no migration enables RLS on it."
+              MISSING=1
+            fi
+          done
+          exit $MISSING
+        fi

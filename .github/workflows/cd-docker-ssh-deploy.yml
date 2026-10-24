@@ -1,0 +1,111 @@
+name: Reusable Docker Build & SSH Deploy
+
+on:
+  workflow_call:
+    inputs:
+      service-names:
+        description: 'JSON array of image/service names (e.g. ["ledger-backend"] or ["api","auth"])'
+        type: string
+        required: true
+      image-prefix:
+        description: 'Prefix before service name (e.g. "hrms-" -> hrms-api)'
+        type: string
+        default: ''
+      use-build-arg-app-name:
+        description: 'Pass --build-arg APP_NAME=<service> for monorepos'
+        type: boolean
+        default: false
+      dockerfile-target:
+        description: 'Docker multi-stage target (leave empty if none)'
+        type: string
+        default: ''
+      dockerfile-path:
+        type: string
+        default: 'Dockerfile'
+      free-disk-space:
+        type: boolean
+        default: true
+      registry-host:
+        type: string
+        default: 'registry.gitlab.com'
+      target-dir:
+        description: 'Server directory path (e.g. ~/hrms-admin-backend)'
+        type: string
+        required: true
+      compose-file:
+        type: string
+        default: 'docker-compose.production.yml'
+      deploy-branch:
+        type: string
+        default: 'production'
+    secrets:
+      REGISTRY_URL:
+        required: true
+      REGISTRY_USER:
+        required: true
+      REGISTRY_PASSWORD:
+        required: true
+      SERVER_IP:
+        required: true
+      SSH_USER:
+        required: true
+      SSH_PRIVATE_KEY:
+        required: true
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(inputs.service-names) }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Free Disk Space
+        if: ${{ inputs.free-disk-space }}
+        uses: ./.github/actions/free-disk-space
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.registry-host }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_TAG="${{ secrets.REGISTRY_URL }}/${{ inputs.image-prefix }}${{ matrix.service }}:latest"
+          
+          BUILD_ARGS=""
+          if [ "${{ inputs.dockerfile-target }}" != "" ]; then
+            BUILD_ARGS="$BUILD_ARGS --target ${{ inputs.dockerfile-target }}"
+          fi
+          if [ "${{ inputs.use-build-arg-app-name }}" = "true" ]; then
+            BUILD_ARGS="$BUILD_ARGS --build-arg APP_NAME=${{ matrix.service }}"
+          fi
+
+          docker build -t "$IMAGE_TAG" $BUILD_ARGS -f ${{ inputs.dockerfile-path }} .
+          docker push "$IMAGE_TAG"
+
+  deploy-via-ssh:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH into Server and Update Containers
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd ${{ inputs.target-dir }}
+            git pull origin ${{ inputs.deploy-branch }} || true
+            docker compose -f ${{ inputs.compose-file }} pull
+            docker compose -f ${{ inputs.compose-file }} up -d --force-recreate --remove-orphans
+            docker image prune -f

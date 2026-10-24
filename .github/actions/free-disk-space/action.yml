@@ -1,0 +1,14 @@
+name: 'Free Disk Space'
+description: 'Removes unnecessary large packages from Ubuntu runners'
+runs:
+  using: "composite"
+  steps:
+    - name: Free Disk Space
+      shell: bash
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf "/usr/local/share/boost"
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        df -h

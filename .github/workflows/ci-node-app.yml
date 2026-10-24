@@ -1,0 +1,92 @@
+name: Reusable Node.js CI
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        type: string
+        default: '.'
+      node-version:
+        type: string
+        default: '22'
+      package-manager:
+        type: string
+        default: 'npm' # 'npm' or 'yarn'
+      run-prisma-generate:
+        type: boolean
+        default: false
+      run-prisma-hygiene:
+        type: boolean
+        default: false
+      run-typecheck:
+        type: boolean
+        default: true
+      lint-command:
+        type: string
+        default: 'npm run lint'
+      test-command:
+        type: string
+        default: 'npm test'
+      build-command:
+        type: string
+        default: 'npm run build'
+      build-env:
+        description: 'JSON object of non-secret build env vars (e.g. NEXT_PUBLIC_*)'
+        type: string
+        default: '{}'
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: ${{ inputs.package-manager }}
+          cache-dependency-path: ${{ inputs.working-directory }}/${{ inputs.package-manager == 'yarn' && 'yarn.lock' || 'package-lock.json' }}
+
+      - name: Install Dependencies
+        run: |
+          if [ "${{ inputs.package-manager }}" = "yarn" ]; then
+            yarn install --frozen-lockfile
+          else
+            npm ci
+          fi
+
+      - name: Generate Prisma Client
+        if: ${{ inputs.run-prisma-generate }}
+        run: npx prisma generate
+
+      - name: Typecheck
+        if: ${{ inputs.run-typecheck }}
+        run: npx tsc --noEmit
+
+      - name: Run Linter
+        if: ${{ inputs.lint-command != '' }}
+        run: ${{ inputs.lint-command }}
+
+      - name: Run Tests
+        if: ${{ inputs.test-command != '' }}
+        run: ${{ inputs.test-command }}
+
+      - name: Build Application
+        if: ${{ inputs.build-command != '' }}
+        run: |
+          # Export dynamic non-secret build env vars if provided
+          if [ '${{ inputs.build-env }}' != '{}' ]; then
+            eval $(echo '${{ inputs.build-env }}' | jq -r 'to_entries | .[] | "export \(.key)=\"\(.value)\""')
+          fi
+          ${{ inputs.build-command }}
+
+      - name: Run Prisma & NestJS Hygiene
+        if: ${{ inputs.run-prisma-hygiene }}
+        uses: ./.github/actions/prisma-nestjs-hygiene
+        with:
+          working-directory: ${{ inputs.working-directory }}
