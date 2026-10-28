@@ -87,6 +87,6 @@ jobs:
 
       - name: Run Prisma & NestJS Hygiene
         if: ${{ inputs.run-prisma-hygiene }}
-        uses: ./.github/actions/prisma-nestjs-hygiene
+        uses: tanzim077/shared-workflows/.github/actions/prisma-nestjs-hygiene@v1.0.1
         with:
           working-directory: ${{ inputs.working-directory }}

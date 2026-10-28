@@ -24,11 +24,11 @@ shared-workflows/
 
 ## 🔒 Security & Version Pinning
 
-Because this repository is public, **never reference mutable branches like `@main`** in production pipelines. Always pin workflows to an immutable release tag (e.g., `@v1.0.0`) or a full 40-character commit SHA.
+Because this repository is public, **never reference mutable branches like `@main`** in production pipelines. Always pin workflows to an immutable release tag (e.g., `@v1.0.1`) or a full 40-character commit SHA.
 
 ```yaml
 # Recommended (Tag Pinning)
-uses: tanzim077/shared-workflows/.github/workflows/cd-docker-ssh-deploy.yml@v1.0.0
+uses: tanzim077/shared-workflows/.github/workflows/cd-docker-ssh-deploy.yml@v1.0.1
 
 # Maximum Security (Commit SHA Pinning)
 uses: tanzim077/shared-workflows/.github/workflows/cd-docker-ssh-deploy.yml@<40-char-commit-sha>
@@ -41,7 +41,7 @@ uses: tanzim077/shared-workflows/.github/workflows/cd-docker-ssh-deploy.yml@<40-
 Builds one or multiple Docker images (supports both single-service repos and multi-service monorepos via a matrix), pushes them to a container registry, and deploys them to a remote server over SSH using Docker Compose.
 
 ### Path
-`tanzim077/shared-workflows/.github/workflows/cd-docker-ssh-deploy.yml@v1.0.0`
+`tanzim077/shared-workflows/.github/workflows/cd-docker-ssh-deploy.yml@v1.0.1`
 
 ### Inputs (`with:`)
 
@@ -76,7 +76,7 @@ Builds one or multiple Docker images (supports both single-service repos and mul
 Standardized continuous integration pipeline for Node.js applications (NestJS, Express, Next.js, React). Supports both `npm` and `yarn`, custom working directories, Prisma client generation, and optional NestJS/Prisma security hygiene checks.
 
 ### Path
-`tanzim077/shared-workflows/.github/workflows/ci-node-app.yml@v1.0.0`
+`tanzim077/shared-workflows/.github/workflows/ci-node-app.yml@v1.0.1`
 
 ### Inputs (`with:`)
 
@@ -103,14 +103,14 @@ You can also invoke the standalone composite actions directly inside custom jobs
 Removes unused SDKs (`.NET`, `Android`, `GHC`, `Boost`) from GitHub-hosted Ubuntu runners.
 ```yaml
 - name: Free Runner Disk Space
-  uses: tanzim077/shared-workflows/.github/actions/free-disk-space@v1.0.0
+  uses: tanzim077/shared-workflows/.github/actions/free-disk-space@v1.0.1
 ```
 
 ### B. Prisma & NestJS Hygiene
 Ensures all controller `@Body()` decorators are typed with a `Dto` class, verifies every Prisma migration folder contains a `migration.sql`, and checks for Row-Level Security (RLS) policy drift against `prisma/rls/rls-policies.sql`.
 ```yaml
 - name: Run Prisma & NestJS Hygiene
-  uses: tanzim077/shared-workflows/.github/actions/prisma-nestjs-hygiene@v1.0.0
+  uses: tanzim077/shared-workflows/.github/actions/prisma-nestjs-hygiene@v1.0.1
   with:
     working-directory: 'api'
     check-rls: 'true'
@@ -132,7 +132,7 @@ on:
 
 jobs:
   deploy:
-    uses: tanzim077/shared-workflows/.github/workflows/cd-docker-ssh-deploy.yml@v1.0.0
+    uses: tanzim077/shared-workflows/.github/workflows/cd-docker-ssh-deploy.yml@v1.0.1
     with:
       service-names: '["employee-panel"]'
       target-dir: '~/employee-panel'
@@ -158,7 +158,7 @@ on:
 
 jobs:
   deploy:
-    uses: tanzim077/shared-workflows/.github/workflows/cd-docker-ssh-deploy.yml@v1.0.0
+    uses: tanzim077/shared-workflows/.github/workflows/cd-docker-ssh-deploy.yml@v1.0.1
     with:
       service-names: '["api", "auth", "user", "subscription", "organization"]'
       image-prefix: 'hrms-'
@@ -192,7 +192,7 @@ concurrency:
 
 jobs:
   api-ci:
-    uses: tanzim077/shared-workflows/.github/workflows/ci-node-app.yml@v1.0.0
+    uses: tanzim077/shared-workflows/.github/workflows/ci-node-app.yml@v1.0.1
     with:
       working-directory: 'api'
       node-version: '24'
@@ -203,7 +203,7 @@ jobs:
       test-command: 'npx jest --ci'
 
   web-ci:
-    uses: tanzim077/shared-workflows/.github/workflows/ci-node-app.yml@v1.0.0
+    uses: tanzim077/shared-workflows/.github/workflows/ci-node-app.yml@v1.0.1
     with:
       working-directory: 'web'
       node-version: '24'

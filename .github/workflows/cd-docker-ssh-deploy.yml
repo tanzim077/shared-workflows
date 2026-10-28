@@ -65,7 +65,7 @@ jobs:
 
       - name: Free Disk Space
         if: ${{ inputs.free-disk-space }}
-        uses: ./.github/actions/free-disk-space
+        uses: tanzim077/shared-workflows/.github/actions/free-disk-space@v1.0.1
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
