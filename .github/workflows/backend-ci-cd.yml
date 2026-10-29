@@ -1,0 +1,46 @@
+name: Shared Backend CI/CD Pipeline (Backward-Compatible Forwarder)
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        description: 'Name of the service being deployed'
+        required: true
+        type: string
+      branch_name:
+        description: 'Target branch'
+        required: false
+        type: string
+        default: 'production'
+      node_version:
+        description: 'Node.js runtime version'
+        required: false
+        type: string
+        default: '20'
+      image_tag:
+        description: 'Docker image tag (defaults to sha)'
+        required: false
+        type: string
+        default: 'latest'
+    secrets:
+      GITLAB_REGISTRY_USER:
+        required: false
+      GITLAB_REGISTRY_PASSWORD:
+        required: false
+      GITLAB_REGISTRY_URL:
+        required: false
+      ENV_HOLDER_WEBHOOK_URL:
+        required: false
+
+jobs:
+  build-and-push:
+    uses: tanzim077/shared-workflows/.github/workflows/docker-build-push.yml@main
+    with:
+      service-names: ${{ format('["{0}"]', inputs.service_name) }}
+      dockerfile-target: 'production'
+      trigger-env-holder: true
+    secrets:
+      REGISTRY_URL: ${{ secrets.GITLAB_REGISTRY_URL }}
+      REGISTRY_USER: ${{ secrets.GITLAB_REGISTRY_USER }}
+      REGISTRY_PASSWORD: ${{ secrets.GITLAB_REGISTRY_PASSWORD }}
+      ENV_HOLDER_WEBHOOK_URL: ${{ secrets.ENV_HOLDER_WEBHOOK_URL }}
