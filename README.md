@@ -16,7 +16,8 @@ shared-workflows/
 │   │       └── action.yml              # Validates NestJS DTOs, Prisma migrations, and RLS policies
 │   └── workflows/
 │       ├── ci-node-app.yml             # Reusable CI: Typecheck, Lint, Test, Build & Hygiene
-│       └── cd-docker-ssh-deploy.yml    # Reusable CD: Matrix Docker Build, Push & SSH Compose Deploy
+│       ├── cd-docker-ssh-deploy.yml    # Reusable CD: Matrix Docker Build, Push & SSH Compose Deploy
+│       └── docker-build-push.yml       # Reusable Build & Push (No SSH) + env-holder Trigger
 └── README.md
 ```
 
