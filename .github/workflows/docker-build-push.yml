@@ -19,6 +19,10 @@ on:
         description: 'Target stage for multi-stage Dockerfiles (e.g. "production")'
         type: string
         default: ''
+      dockerfile-context:
+        description: 'Docker build context path'
+        type: string
+        default: '.'
       dockerfile-path:
         description: 'Relative path to Dockerfile'
         type: string
@@ -70,14 +74,25 @@ jobs:
       - name: 🏷️ Resolve Image Tags & Build Args
         id: meta
         run: |
-          BASE_NAME="${{ secrets.REGISTRY_URL }}/${{ inputs.image-prefix }}${{ matrix.service }}"
+          REG_URL=$(echo "${{ secrets.REGISTRY_URL }}" | sed 's:/*$::')
+          SERVICE_NAME="${{ inputs.image-prefix }}${{ matrix.service }}"
+
+          if [ -z "$SERVICE_NAME" ] || [ "$SERVICE_NAME" = "." ] || [ "$SERVICE_NAME" = "root" ] || [ "$SERVICE_NAME" = "app" ]; then
+            BASE_NAME="$REG_URL"
+          elif [ "$(basename "$REG_URL")" = "$SERVICE_NAME" ]; then
+            BASE_NAME="$REG_URL"
+          else
+            BASE_NAME="${REG_URL}/${SERVICE_NAME}"
+          fi
+
+          echo "Resolved Docker image target: ${BASE_NAME}"
           echo "tag_sha=${BASE_NAME}:${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "tag_latest=${BASE_NAME}:latest" >> $GITHUB_OUTPUT
 
       - name: 📦 Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ${{ inputs.dockerfile-context }}
           file: ${{ inputs.dockerfile-path }}
           target: ${{ inputs.dockerfile-target != '' && inputs.dockerfile-target || null }}
           build-args: |
