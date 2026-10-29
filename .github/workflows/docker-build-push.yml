@@ -85,9 +85,17 @@ jobs:
             BASE_NAME="${REG_URL}/${SERVICE_NAME}"
           fi
 
+          # Resolve build-args
+          BUILD_ARGS=""
+          if [ "${{ inputs.use-build-arg-app-name }}" = "true" ]; then
+            BUILD_ARGS="APP_NAME=${{ matrix.service }}"
+          fi
+
           echo "Resolved Docker image target: ${BASE_NAME}"
+          echo "Resolved build-args: ${BUILD_ARGS}"
           echo "tag_sha=${BASE_NAME}:${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "tag_latest=${BASE_NAME}:latest" >> $GITHUB_OUTPUT
+          echo "build_args=${BUILD_ARGS}" >> $GITHUB_OUTPUT
 
       - name: 📦 Build and push Docker image
         uses: docker/build-push-action@v5
@@ -96,7 +104,7 @@ jobs:
           file: ${{ inputs.dockerfile-path }}
           target: ${{ inputs.dockerfile-target != '' && inputs.dockerfile-target || null }}
           build-args: |
-            ${{ inputs.use-build-arg-app-name && format('APP_NAME={0}', matrix.service) || '' }}
+            ${{ steps.meta.outputs.build_args }}
           push: true
           tags: |
             ${{ steps.meta.outputs.tag_sha }}
